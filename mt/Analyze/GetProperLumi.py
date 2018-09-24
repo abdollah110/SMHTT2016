@@ -25,12 +25,6 @@ for dataset in DIR:
                     Eve= int(line.replace('<Branch Name="EcalRecHitsSorted_reducedEgamma_reducedEBRecHits_MERGE." ReadCount="','').replace('" />',''))
                     Total +=Eve
 
-        else:
-            xmlFile=open(errFile.replace('err','xml').replace('\n',''),'r')
-                for line in xmlFile.readlines():
-                    if '<Branch Name="EcalRecHitsSorted_reducedEgamma_reducedEBRecHits_MERGE." ReadCount=' in line:
-                        Eve= int(line.replace('<Branch Name="EcalRecHitsSorted_reducedEgamma_reducedEBRecHits_MERGE." ReadCount="','').replace('" />',''))
-                            TotalFail +=Eve
 
     print 'datatse is %s and TotalNumber of events is %d'%(dataset,TotalSuccess,TotalFail)
 
