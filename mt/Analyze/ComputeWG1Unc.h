@@ -1,6 +1,7 @@
-using namespace std;
+
 #include <vector>
 typedef std::vector<double> NumV;
+using namespace std;
 //
 // The input kinematics should be based on the truth quantites of
 // defined according to:

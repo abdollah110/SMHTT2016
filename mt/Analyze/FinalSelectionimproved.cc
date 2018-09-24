@@ -33,6 +33,7 @@
 #include "RooRealVar.h"
 #include "RooFunctor.h"
 #include "EmbedWeight.h"
+#include "makeHisto.h"
 
 #include <vector>
 typedef std::vector<double> NumV;
@@ -45,6 +46,14 @@ int main(int argc, char** argv) {
     std::string output = *(argv + 2);
     std::string sample = *(argv + 3);
     std::string name = *(argv + 4);
+    
+    
+    TFile *fout = TFile::Open(output.c_str(), "RECREATE");
+
+    
+    //AM
+     myMap1 = new std::map<std::string, TH1F*>();
+    
     
     float tes=0;
     if (argc > 1) {
@@ -74,14 +83,15 @@ int main(int argc, char** argv) {
     RooWorkspace *w2 = (RooWorkspace*)fw2.Get("w");
     fw2.Close();
     
-    TFile f("htt_scalefactors_v16_8_embedded.root");
-//    TFile f("htt_scalefactors_v16_5.root");
+//    TFile f("htt_scalefactors_v16_8_embedded.root");
+    TFile f("htt_scalefactors_v16_9_embedded.root");
     RooWorkspace *wEmbed = (RooWorkspace*)f.Get("w");
     f.Close();
 
     
     
     float xs=1.0; float weight=1.0; float luminosity=35870.0;
+//    float xs=1.0; float weight=1.0; float luminosity=2010;
     if (sample=="ZL" or sample=="ZTT" or sample=="ZJ" or sample=="ZLL"){ xs=5765.4; weight=luminosity*xs/ngen;}
     else if (sample=="TT" or sample=="TTT" or sample=="TTJ") {xs=831.76; weight=luminosity*xs/ngen;}
     else if (sample=="W") {xs=61526.7; weight=luminosity*xs/ngen;}
@@ -375,6 +385,9 @@ int main(int argc, char** argv) {
     
     arbre->SetBranchAddress("GenWeight",&GenWeight);
     
+    
+    
+    
     float bins0[] = {0,60,65,70,75,80,85,90,95,100,105,110,400};
     //float bins0[] = {0,60,70,80,90,100,110,400};
     float bins1[] = {0,80,90,100,110,120,130,140,150,160,300};
@@ -471,13 +484,13 @@ int main(int argc, char** argv) {
     
     
     int nbhist=1;
-    if (tes==1000) nbhist=18;
-    if (tes==100) nbhist=56;
-    if (tes==1) nbhist=12;
-    if (tes==16) nbhist=6;
-    if (tes==17) nbhist=12;
-    if (tes==18) nbhist=4;
-    if (tes==19) nbhist=6;
+//    if (tes==1000) nbhist=18;
+//    if (tes==100) nbhist=56;
+//    if (tes==1) nbhist=12;
+//    if (tes==16) nbhist=6;
+//    if (tes==17) nbhist=12;
+//    if (tes==18) nbhist=4;
+//    if (tes==19) nbhist=6;
     
     for (int k=0; k<nbhist; ++k){
         ostringstream HNn70; HNn70 << "n70" << k;
@@ -587,7 +600,7 @@ int main(int argc, char** argv) {
         fflush(stdout);
         
         //        if (GenWeight > 1) cout<<"GenWeight= "<<GenWeight<<"\n";
-        //        if (GenWeight > 1) continue;
+        if (GenWeight > 1) continue;
         
         if (name.find("ggH_fwd_htt1") < 140 && Rivet_stage0_cat!=10) continue;
         if (name.find("ggH_stage0_htt1") < 140 && Rivet_stage0_cat!=11) continue;//FIXME
@@ -709,11 +722,20 @@ int main(int argc, char** argv) {
         float correction=sf_id;
         amcatNLO_weight=1.0;
         
+        
+        if (sample!="embedded") GenWeight=1;
+        
+        
         if (sample!="embedded" && sample!="data_obs") correction=correction*LumiWeights_12->weight(npu);
         //        if (sample=="embedded" && amcatNLO_weight>1) amcatNLO_weight=0.10;
         float aweight=amcatNLO_weight*weight*correction;
         
-        if (sample!="data_obs"){
+        
+//        cout << "aweight before =" <<aweight<<"\n";
+        
+        
+        // AM SYS Exceptionaly drop this for embedded as gen_match_2 for embed is 0
+        if (sample!="embedded" && sample!="data_obs"){
             if (gen_match_2==5) aweight=aweight*0.95;
             if (gen_match_2==2 or gen_match_2==4){//Yiwen reminiaod
                 if (fabs(eta_2)<0.4) aweight=aweight*1.263;
@@ -734,6 +756,8 @@ int main(int argc, char** argv) {
             aweight=aweight*h_Trk->Eval(eta_1);
 //            cout <<"gen_match_1= "<<gen_match_1<<"  gen_match_2= "<<gen_match_2<<"    h_Trk->Eval(eta_1) Eff= "<<h_Trk->Eval(eta_1)<<"\n";
         }
+        
+//        cout << "    ---   > aweight after =" <<aweight<< "   Genmatch"<< gen_match_2 << "\n";
         
         
         if (name.find("ggH")<100 && name.find("NNLOPS")>100 && name.find("hww")>100){
@@ -793,9 +817,9 @@ int main(int argc, char** argv) {
         if (pttop1>400) pttop1=400;
         float pttop2=pt_top2;
         if (pttop2>400) pttop2=400;
-        if ((sample=="TTJ" or sample=="TTT" or sample=="TT") && fabs(tes)!=11) aweight*=sqrt(exp(0.0615-0.0005*pttop1)*exp(0.0615-0.0005*pttop2));
-        if ((sample=="TTJ" or sample=="TTT" or sample=="TT") && tes==11) aweight*=(1+2*(sqrt(exp(0.0615-0.0005*pttop1)*exp(0.0615-0.0005*pttop2))-1));
-        
+//        if ((sample=="TTJ" or sample=="TTT" or sample=="TT") && fabs(tes)!=11) aweight*=sqrt(exp(0.0615-0.0005*pttop1)*exp(0.0615-0.0005*pttop2));
+//        if ((sample=="TTJ" or sample=="TTT" or sample=="TT") && tes==11) aweight*=(1+2*(sqrt(exp(0.0615-0.0005*pttop1)*exp(0.0615-0.0005*pttop2))-1));
+//        
         if (sample=="data_obs") aweight=1.0;
         
         float weight_btag=1.0;
@@ -829,77 +853,25 @@ int main(int argc, char** argv) {
             if (tes!=100) numberJets=njets;
             if (tes!=100) massJets=mjj;
             float weight2=1.0;
-            if (tes==1000){
-                if (k==0) weight2=1+WG1unc[0];
-                else if (k==1) weight2=1-WG1unc[0];
-                else if (k==2) weight2=1+WG1unc[1];
-                else if (k==3) weight2=1-WG1unc[1];
-                else if (k==4) weight2=1+WG1unc[2];
-                else if (k==5) weight2=1-WG1unc[2];
-                else if (k==6) weight2=1+WG1unc[3];
-                else if (k==7) weight2=1-WG1unc[3];
-                else if (k==8) weight2=1+WG1unc[4];
-                else if (k==9) weight2=1-WG1unc[4];
-                else if (k==10) weight2=1+WG1unc[5];
-                else if (k==11) weight2=1-WG1unc[5];
-                else if (k==12) weight2=1+WG1unc[6];
-                else if (k==13) weight2=1-WG1unc[6];
-                else if (k==14) weight2=1+WG1unc[7];
-                else if (k==15) weight2=1-WG1unc[7];
-                else if (k==16) weight2=1+WG1unc[8];
-                else if (k==17) weight2=1-WG1unc[8];
-            }
+            
             
             TLorentzVector mymet=myrawmet;
+            
+            
             mytau=myrawtau;
             var1_1=pt_sv;
             var2=m_sv;
+            
             float var1_2=massJets;
             
-            if (tes==1 && gen_match_2==5){
-                if (k==0){ var1_1=pt_sv_DOWN; var2=m_sv_DOWN; mytau*=0.988; mymet=mymet+(0.012/0.988)*mytau;}
-                if (k==1){ var1_1=pt_sv_UP; var2=m_sv_UP; mytau*=1.012; mymet=mymet-(0.012/1.012)*mytau;}
-                if (k==2 && l2_decayMode==0){ var1_1=pt_sv_DOWN; var2=m_sv_DOWN; mytau*=0.988; mymet=mymet+(0.012/0.988)*mytau;}
-                if (k==3 && l2_decayMode==0){ var1_1=pt_sv_UP; var2=m_sv_UP; mytau*=1.012; mymet=mymet-(0.012/1.012)*mytau;}
-                if (k==4 && l2_decayMode==1){ var1_1=pt_sv_DOWN; var2=m_sv_DOWN; mytau*=0.988; mymet=mymet+(0.012/0.988)*mytau;}
-                if (k==5 && l2_decayMode==1){ var1_1=pt_sv_UP; var2=m_sv_UP; mytau*=1.012; mymet=mymet-(0.012/1.012)*mytau;}
-                if (k==6 && l2_decayMode==10){ var1_1=pt_sv_DOWN; var2=m_sv_DOWN; mytau*=0.988; mymet=mymet+(0.012/0.988)*mytau;}
-                if (k==7 && l2_decayMode==10){ var1_1=pt_sv_UP; var2=m_sv_UP; mytau*=1.012; mymet=mymet-(0.012/1.012)*mytau;}
-            }
+
+
             
-            if (tes==1){
-                if (k==8){ var2=m_sv_UESDown; var1_1=pt_sv_UESDown; mymet.SetPtEtaPhiM(met_UESDown,0,metphi_UESDown,0);}
-                else if (k==9){ var2=m_sv_UESUp; var1_1=pt_sv_UESUp; mymet.SetPtEtaPhiM(met_UESUp,0,metphi_UESUp,0);}
-                else if (k==10){ var2=m_sv_JESDown; var1_1=pt_sv_JESDown; mymet.SetPtEtaPhiM(met_JESDown,0,metphi_JESDown,0);}
-                else if (k==11){ var2=m_sv_JESUp; var1_1=pt_sv_JESUp; mymet.SetPtEtaPhiM(met_JESUp,0,metphi_JESUp,0);}
-            }
             
-            if (tes==15 && sample=="ZL"){ var1_1=pt_sv_UP; var2=m_sv_UP; mytau*=1.015; mymet=mymet-(0.015/1.015)*mytau;}
-            if (tes==-15 && sample=="ZL"){ var1_1=pt_sv_DOWN; var2=m_sv_DOWN; mytau*=0.985; mymet=mymet+(0.015/0.985)*mytau;}
+            
             float dm_weight=1.0;
-            if (tes==16 && gen_match_2==5){
-                if (k==0 && l2_decayMode==0) dm_weight=1.03;
-                else if (k==1 && l2_decayMode==0) dm_weight=0.97;
-                else if (k==2 && l2_decayMode==1) dm_weight=1.03;
-                else if (k==3 && l2_decayMode==1) dm_weight=0.97;
-                else if (k==4 && l2_decayMode==10) dm_weight=1.03;
-                else if (k==5 && l2_decayMode==10) dm_weight=0.97;
-            }
-            if (tes==19 && gen_match_2==6){
-                if (k==0 && l2_decayMode==0) dm_weight=1.20;
-                else if (k==1 && l2_decayMode==0) dm_weight=0.80;
-                else if (k==2 && l2_decayMode==1) dm_weight=1.20;
-                else if (k==3 && l2_decayMode==1) dm_weight=0.80;
-                else if (k==4 && l2_decayMode==10) dm_weight=1.20;
-                else if (k==5 && l2_decayMode==10) dm_weight=0.80;
-            }
-            
-            if (tes==18 && sample=="ZL"){
-                if (k==0 && l2_decayMode==0) dm_weight=1.25;
-                else if (k==1 && l2_decayMode==0) dm_weight=0.75;
-                else if (k==2 && l2_decayMode==1) dm_weight=1.25;
-                else if (k==3 && l2_decayMode==1) dm_weight=0.75;
-            }
+
+
             
             if (numberJets==0) var2=(mymu+mytau).M();
             
@@ -1006,480 +978,135 @@ int main(int argc, char** argv) {
             
             
             
+            
+            
+            
+            
+            
+            
             if (sample=="data_obs") {aweight=1.0; weight2=1.0;}
             weight2=weight2*sf_trg*dm_weight;
             ratioanti=ratioantiraw*sf_trg_anti/(sf_trg+0.000000001);
             
             
-//            
-//            if (sample=="data_obs") {
-//                aweight=1.0; weight2=1.0;
-//                weight2=weight2*sf_trg*dm_weight;
-//                ratioanti=ratioantiraw*sf_trg_anti/(sf_trg+0.000000001);
-//            }
-//            
-            if (sample=="embedded") {sf_trg=1;sf_trg_anti=1; // Just set it to 0
-                aweight=1.0; weight2=1.0;}
             
-            vector<double> info=EmdWeight_Muon(wEmbed,mymu.Pt(),mymu.Eta(),0.2);
-//            for (int em=0; em< info.size() ;em++){
-////                cout<<em << "  mu  " <<info[em] <<"\n";
-//            }
-//            
-            
-//            double muon_id_scalefactor = info[]->function("m_id_ratio")->getVal();
-//            double muon_iso_scalefactor = info[]->function("m_iso_ratio")->getVal();
-//            double muon_trg_efficiency = info[]>function("m_trg_data")->getVal();
+            //#########################################################################################################
+            //##############################  Embedded Weights   #############################################
+            //#########################################################################################################
+//            float Stitching_Weight= 1.0/0.899;
+            float Stitching_Weight= 1.0;
             
             
-//            cout<< " \n\n\n " ;
-//            
-//            vector<double> info2=EmdWeight_Electron(wEmbed,mytau2.Pt(),mytau2.Eta(),0.2);
-//            for (int em=0; em< info2.size() ;em++){
-//                cout<<em << "  ele  " <<info2[em] <<"\n";
-//            }
-//            cout<< " \n\n\n " ;
-//            
-            
-//            cout << "l2_decayMode= "<<l2_decayMode<<"\n";
-//            vector<double> info3=EmdWeight_Tau(wEmbed,mytau.Pt(),mytau.Eta(),l2_decayMode);
-//            for (int em=0; em< info3.size() ;em++){
-//                cout<<em << "  tau  " <<info3[em] <<"\n";
-//            }
-//            cout<< " \n\n\n " ;
+            if (sample=="embedded") {
+            if ((run >= 272007) && (run < 275657)) Stitching_Weight=(1.0/0.899);
+            if((run >= 275657) && (run < 276315))  Stitching_Weight=(1.0/0.881);
+            if((run >= 276315) && (run < 276831))  Stitching_Weight=(1.0/0.877);
+            if((run >= 276831) && (run < 277772))  Stitching_Weight=(1.0/0.939);
+            if((run >= 277772) && (run < 278820))  Stitching_Weight=(1.0/0.936);
+            if((run >= 278820) && (run < 280919))  Stitching_Weight=(1.0/0.908);
+            if((run >= 280919) && (run < 284045))  Stitching_Weight=(1.0/0.962);
+            }
             
             
-//                if (GenWeight > 1) cout<<GenWeight<<"\n";  // AM if the GenWeight is odd, set it to the average
-                if (GenWeight > 1) GenWeight=0.06;  // AM if the GenWeight is odd, set it to the average
+            vector<double> info=EmdWeight_Muon(wEmbed,mymu.Pt(),mymu.Eta(),0.1);
             
-                GenWeight=1;
-                weight2=weight2*sf_trg*dm_weight * GenWeight;
-                ratioanti=ratioantiraw*sf_trg_anti/(sf_trg+0.000000001);
+            double muon_id_scalefactor = info[2];
+            double muon_iso_scalefactor = info[5];
+            double muon_trg_efficiency = info[6];
             
-//                cout << "weight2 <<   sf_trg  <<  dm_weight << GenWeight " << weight2 << " "  << sf_trg << " " <<  dm_weight<< " " << GenWeight<< "\n ";
+            double TotEmbedWeight=muon_id_scalefactor*muon_iso_scalefactor*muon_trg_efficiency;
+            
+//            vector<double> info3=EmdWeight_Tau(wEmbed,mytau.Pt(),l2_decayMode);  NOT NEEDED
+            
+            float WEIGHT_sel_trg_ratio= m_sel_trg_ratio(wEmbed,mymu.Pt(),mymu.Eta(),mytau.Pt(),mytau.Eta());
+            
+            if (sample=="embedded") {
+                
+                
+            
+                weight2=TotEmbedWeight * GenWeight * Stitching_Weight * WEIGHT_sel_trg_ratio;
+                aweight=1;
+            }
+            
+            
+            //#########################################################################################################
+            //##############################  Analysis categories Weights   #############################################
+            //#########################################################################################################
             
             
             bool is_0jet=(numberJets==0);
             bool is_boosted=(numberJets==1 or (numberJets>=2 && (massJets<=300 or var1_1<=50 or mytau.Pt()<=40)));
             bool is_VBF=(massJets > 300 && numberJets>=2 && var1_1>50 && mytau.Pt()>40);
             
-            //################ W+jets reweighting in high mT ###############
-            
-            if (q_1*q_2<0 && mt>80 && mt<200 && wsfRegion){
-                n70[k]->Fill(0.1,aweight*weight2);
-                if (is_bveto && is_0jet && var2<400) n70[k]->Fill(1.1,aweight*weight2*weight_btag);
-                if (is_bveto && is_boosted && var2<300) n70[k]->Fill(2.1,aweight*weight2*weight_btag);
-                if (is_bveto && is_VBF && var2<400) n70[k]->Fill(3.1,aweight*weight2*weight_btag);
-            }
-            
-            if (q_1*q_2>0 && mt>80 && mt<200 && wsfRegion){
-                n70SS[k]->Fill(0.1,aweight*weight2);
-                if (is_bveto && is_0jet && var2<400) n70SS[k]->Fill(1.1,aweight*weight2*weight_btag);
-                if (is_bveto && is_boosted && var2<300) n70SS[k]->Fill(2.1,aweight*weight2*weight_btag);
-                if (is_bveto && is_VBF && var2<400) n70SS[k]->Fill(3.1,aweight*weight2*weight_btag);
-            }
+//            //################ W+jets reweighting in high mT ###############
+//            
+//            if (q_1*q_2<0 && mt>80 && mt<200 && wsfRegion){
+//                n70[k]->Fill(0.1,aweight*weight2);
+//                if (is_bveto && is_0jet && var2<400) n70[k]->Fill(1.1,aweight*weight2*weight_btag);
+//                if (is_bveto && is_boosted && var2<300) n70[k]->Fill(2.1,aweight*weight2*weight_btag);
+//                if (is_bveto && is_VBF && var2<400) n70[k]->Fill(3.1,aweight*weight2*weight_btag);
+//            }
+//            
+//            if (q_1*q_2>0 && mt>80 && mt<200 && wsfRegion){
+//                n70SS[k]->Fill(0.1,aweight*weight2);
+//                if (is_bveto && is_0jet && var2<400) n70SS[k]->Fill(1.1,aweight*weight2*weight_btag);
+//                if (is_bveto && is_boosted && var2<300) n70SS[k]->Fill(2.1,aweight*weight2*weight_btag);
+//                if (is_bveto && is_VBF && var2<400) n70SS[k]->Fill(3.1,aweight*weight2*weight_btag);
+//            }
             
             
             //************************* Fill histograms **********************
             
-//            cout << "aweight " <<aweight  << "  weight2=  "  << weight2  <<    "  ratioanti= "  << ratioanti <<"\n";
             
-            if (qcdCR && q_1*q_2<0 && mt<50){
-                if (is_0jet)
-                    h0_CR_QCD[k]->Fill(var2,aweight*weight2*ratioanti);
-                if (is_boosted)
-                    h1_CR_QCD[k]->Fill(var2,aweight*weight2*ratioanti);
-                if (is_VBF)
-                    h2_CR_QCD[k]->Fill(var2,aweight*weight2*ratioanti);
-            }
-            if (signalRegion && q_1*q_2<0){
-                if (is_0jet && is_bveto && var2<400)
-                    h0_CR_W[k]->Fill(mt,weight2*aweight*weight_btag);
-                if (is_boosted && is_bveto && var2<300)
-                    h1_CR_W[k]->Fill(mt,weight2*aweight*weight_btag);
-                if (is_VBF && is_bveto && var2<400)
-                    h2_CR_W[k]->Fill(mt,weight2*aweight*weight_btag);
-            }
-            
-            if (qcdCR && q_1*q_2>0 && mt<50){
-                if (is_0jet)
-                    h0_CRSS_QCD[k]->Fill(var2,weight2*aweight*ratioanti);
-                if (is_boosted)
-                    h1_CRSS_QCD[k]->Fill(var2,weight2*aweight*ratioanti);
-                if (is_VBF)
-                    h2_CRSS_QCD[k]->Fill(var2,weight2*aweight*ratioanti);
-            }
-            
-            if (signalRegion && q_1*q_2>0){
-                if (is_0jet && is_bveto && var2<400)
-                    h0_CRSS_W[k]->Fill(mt,weight2*aweight*weight_btag);
-                if (is_boosted && is_bveto && var2<300)
-                    h1_CRSS_W[k]->Fill(mt,weight2*aweight*weight_btag);
-                if (is_VBF && is_bveto && var2<400)
-                    h2_CRSS_W[k]->Fill(mt,weight2*aweight*weight_btag);
-            }
             
             if (is_0jet && mt<50){
-                if (tes==12) weight2=weight2*(0.9289 + 0.00017022*mytau.Pt());
-                if (tes==-12) weight2=weight2*(2-(0.9289 + 0.00017022*mytau.Pt()));
-                if (genpT>150 and tes==22) weight2=weight2*(1+0.01*(0.114*genpT -17.14));
-                if (genpT>150 and tes==-22) weight2=weight2*(2-(1+0.01*(0.114*genpT -17.14)));
                 if (signalRegion && q_1*q_2<0){
-                    pteta_0jet->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    mUESUp_0jet->Fill((m_sv_UESUp-m_sv)/m_sv_UESUp,weight2*aweight);
-                    mUESDown_0jet->Fill((m_sv_UESDown-m_sv)/m_sv_UESDown,weight2*aweight);
-                    mCESUp_0jet->Fill((m_sv_JESUp-m_sv)/m_sv_JESUp,weight2*aweight);
-                    mCESDown_0jet->Fill((m_sv_JESDown-m_sv)/m_sv_JESDown,weight2*aweight);
-                    mTESUp_0jet->Fill((m_sv_UP-m_sv)/m_sv_UP,weight2*aweight);
-                    mTESDown_0jet->Fill((m_sv_DOWN-m_sv)/m_sv_DOWN,weight2*aweight);
-                    h0_OS[k]->Fill(var1_0,var2,weight2*aweight);
-                    if (l2_decayMode==0) h2D_0jet->Fill(var2,0.0,weight2*aweight);
-                    if (l2_decayMode==1) h2D_0jet->Fill(var2,1.0,weight2*aweight);
-                    if (l2_decayMode==10) h2D_0jet->Fill(var2,2.0,weight2*aweight);
+                    
+                    
+                    
+//                    cout<<   "weight2 " <<   weight2<< " TotEmbedWeight=" <<TotEmbedWeight<<" GenWeight=" <<GenWeight <<" Stitching_Weight=" << Stitching_Weight<< " WEIGHT_sel_trg_ratio=" <<   WEIGHT_sel_trg_ratio<<" *********  aweight=" <<aweight<<"\n";
+                    
+//                    cout <<   "weight2 " <<  weight2<<" aweight" <<aweight<< "  amcatNLO_weight " <<  amcatNLO_weight <<"   weight  " << weight <<"   correction " << correction  <<"\n";
+//                    
+                    
+                    plotFill("Lep_pt_0jet",mymu.Pt(),50,0,500,weight2*aweight);
+                    plotFill("Lep_eta_0jet",mymu.Eta(),50,-2.5,2.5,weight2*aweight);
+                    
+                    plotFill("Tau_pt_0jet",mytau.Pt(),50,0,500,weight2*aweight);
+                    plotFill("Tau_eta_0jet",mytau.Eta(),50,-2.5,2.5,weight2*aweight);
+                    
+                    plotFill("Higgs_visMass_0jet",(mymu+mytau).M(),50,0,500,weight2*aweight);
+                    plotFill("Higgs_pt_0jet",(mymu+mytau).Pt(),50,0,500,weight2*aweight);
+                    
+                    plotFill("mjj",mjj,20,0,1000,weight2*aweight);
+                    plotFill("jpt_1",jpt_1,50,0,500,weight2*aweight);
+                    plotFill("jpt_2",jpt_2,50,0,500,weight2*aweight);
+                    
+                    
+                    
                 }
-                if (signalRegion && q_1*q_2>0)
-                    h0_SS[k]->Fill(var1_0,var2,weight2*aweight);
-                if (wRegion && q_1*q_2<0)
-                    h0_WOS[k]->Fill(var1_0,var2,weight2*aweight);
-                if (wRegion && q_1*q_2>0)
-                    h0_WSS[k]->Fill(var1_0,var2,weight2*aweight);
-                if (qcdRegion && q_1*q_2>0)
-                    h0_QCD[k]->Fill(var1_0,var2,weight2*aweight);
             }
             
-            if (is_boosted && mt<50){
-                HiggspT->Fill(pt_sv,(mymu+mytau+mymet).Pt());
-                if (tes==12) weight2=weight2*(0.9195 + 0.0010055*var1_1);
-                if (tes==-12) weight2=weight2*(2-(0.9195 + 0.0010055*var1_1));
-                if (genpT>150 and tes==22) {weight2=weight2*(1+0.01*(0.114*genpT -17.14));}
-                if (genpT>150 and tes==-22) weight2=weight2*(2-(1+0.01*(0.114*genpT -17.14)));
-                if (signalRegion && q_1*q_2<0){
-                    h1_OS[k]->Fill(var1_1,var2,weight2*aweight);
-                    h2D_boosted->Fill(var2,var1_2,weight2*aweight);
-                    if (var1_1>150) {
-                        mUESUp_boosted->Fill((m_sv_UESUp-m_sv)/m_sv_UESUp,weight2*aweight);
-                        mUESDown_boosted->Fill((m_sv_UESDown-m_sv)/m_sv_UESDown,weight2*aweight);
-                        mCESUp_boosted->Fill((m_sv_JESUp-m_sv)/m_sv_JESUp,weight2*aweight);
-                        mCESDown_boosted->Fill((m_sv_JESDown-m_sv)/m_sv_JESDown,weight2*aweight);
-                        mTESUp_boosted->Fill((m_sv_UP-m_sv)/m_sv_UP,weight2*aweight);
-                        mTESDown_boosted->Fill((m_sv_DOWN-m_sv)/m_sv_DOWN,weight2*aweight);
-                    }
-                    if (var1_1<100) pteta_boosted_1->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    else if (var1_1<150) pteta_boosted_2->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    else if (var1_1<200) pteta_boosted_3->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    else if (var1_1<250) pteta_boosted_4->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    else if (var1_1<300) pteta_boosted_5->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    else pteta_boosted_6->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                }
-                if (signalRegion && q_1*q_2>0)
-                    h1_SS[k]->Fill(var1_1,var2,weight2*aweight);
-                if (wRegion && q_1*q_2<0)
-                    h1_WOS[k]->Fill(var1_1,var2,weight2*aweight);
-                if (wRegion && q_1*q_2>0)
-                    h1_WSS[k]->Fill(var1_1,var2,weight2*aweight);
-                if (qcdRegion && q_1*q_2>0)
-                    h1_QCD[k]->Fill(var1_1,var2,weight2*aweight);
-            }
             
-            if (is_VBF && mt<50){
-                if (tes==12) weight2=weight2*(1.0258 + 0.00006596*var1_2);
-                if (tes==-12) weight2=weight2*(2-(1.0258 + 0.00006596*var1_2));
-                if (genpT>150 and tes==22) weight2=weight2*(1+0.01*(0.114*genpT -17.14));
-                if (genpT>150 and tes==-22) weight2=weight2*(2-(1+0.01*(0.114*genpT -17.14)));
-                if (signalRegion && q_1*q_2<0){
-                    //if (mjj>1500) cout<<run<<" "<<lumi<<" "<<evt<<" "<<m_sv<<" "<<pt_1<<" "<<pt_2<<" "<<mjj<<endl;
-                    h2_OS[k]->Fill(var1_2,var2,weight2*aweight);
-                    h2D_vbf->Fill(var2,var1_2,weight2*aweight);
-                    if (var1_2<700) pteta_vbf_1->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    else if (var1_2<1100) pteta_vbf_2->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    else if (var1_2<1500) pteta_vbf_3->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    else pteta_vbf_4->Fill(mytau.Pt(),mytau.Eta(),weight2*aweight);
-                    mUESUp_vbf->Fill((m_sv_UESUp-m_sv)/m_sv_UESUp,weight2*aweight);
-                    mUESDown_vbf->Fill((m_sv_UESDown-m_sv)/m_sv_UESDown,weight2*aweight);
-                    mCESUp_vbf->Fill((m_sv_JESUp-m_sv)/m_sv_JESUp,weight2*aweight);
-                    mCESDown_vbf->Fill((m_sv_JESDown-m_sv)/m_sv_JESDown,weight2*aweight);
-                    mTESUp_vbf->Fill((m_sv_UP-m_sv)/m_sv_UP,weight2*aweight);
-                    mTESDown_vbf->Fill((m_sv_DOWN-m_sv)/m_sv_DOWN,weight2*aweight);
-                }
-                if (signalRegion && q_1*q_2>0)
-                    h2_SS[k]->Fill(var1_2,var2,weight2*aweight);
-                if (wRegion && q_1*q_2<0)
-                    h2_WOS[k]->Fill(var1_2,var2,weight2*aweight);
-                if (wRegion && q_1*q_2>0)
-                    h2_WSS[k]->Fill(var1_2,var2,weight2*aweight);
-                if (qcdRegion && q_1*q_2>0)
-                    h2_QCD[k]->Fill(var1_2,var2,weight2*aweight);
-            }
+            
+            
         }
+
         
     } // end of loop over events
     
-    for (int k=0; k<nbhist; ++k){
-        cout<<h0_WOS[k]->Integral()<<endl;
-        h0_WOS[k]->Scale(h0_OS[k]->Integral()/h0_WOS[k]->Integral());
-        h1_WOS[k]->Scale(h1_OS[k]->Integral()/h1_WOS[k]->Integral());
-        h2_WOS[k]->Scale(h2_OS[k]->Integral()/h2_WOS[k]->Integral());
-        h0_WSS[k]->Scale(h0_SS[k]->Integral()/h0_WSS[k]->Integral());
-        h1_WSS[k]->Scale(h1_SS[k]->Integral()/h1_WSS[k]->Integral());
-        h2_WSS[k]->Scale(h2_SS[k]->Integral()/h2_WSS[k]->Integral());
-    }
     
-    TFile *fout = TFile::Open(output.c_str(), "RECREATE");
     fout->cd();
-    hincl->Write();
-    nlowhigh->Write();
-    mUESUp_0jet->Write();
-    mUESDown_0jet->Write();
-    mTESUp_0jet->Write();
-    mTESDown_0jet->Write();
-    mCESUp_0jet->Write();
-    mCESDown_0jet->Write();
     
-    mUESUp_boosted->Write();
-    mUESDown_boosted->Write();
-    mTESUp_boosted->Write();
-    mTESDown_boosted->Write();
-    mCESUp_boosted->Write();
-    mCESDown_boosted->Write();
+    //AM
+    map<string, TH1F*>::const_iterator iMap1 = myMap1->begin();
+    map<string, TH1F*>::const_iterator jMap1 = myMap1->end();
     
-    mUESUp_vbf->Write();
-    mUESDown_vbf->Write();
-    mTESUp_vbf->Write();
-    mTESDown_vbf->Write();
-    mCESUp_vbf->Write();
-    mCESDown_vbf->Write();
+    for (; iMap1 != jMap1; ++iMap1)
+        nplot1(iMap1->first)->Write();
     
-    HiggspT->Write();
-    pteta_0jet->Write();
-    pteta_boosted_1->Write();
-    pteta_boosted_2->Write();
-    pteta_boosted_3->Write();
-    pteta_boosted_4->Write();
-    pteta_boosted_5->Write();
-    pteta_boosted_6->Write();
-    pteta_vbf_1->Write();
-    pteta_vbf_2->Write();
-    pteta_vbf_3->Write();
-    pteta_vbf_4->Write();
     
-    h2D_0jet->Write();
-    h2D_boosted->Write();
-    h2D_vbf->Write();
     
-    TString postfix="";
-    if (tes==1)
-        postfix="_CMS_scale_t_mt_13TeVUp";
-    if (tes==-1)
-        postfix="_CMS_scale_t_mt_13TeVDown";
-    if (tes==15)
-        postfix="_CMS_htt_ZLShape_mt_13TeVUp";
-    if (tes==-15)
-        postfix="_CMS_htt_ZLShape_mt_13TeVDown";
-    if (tes==3)
-        postfix="_CMS_scale_met_13TeVUp";
-    if (tes==-3)
-        postfix="_CMS_scale_met_13TeVDown";
-    if (tes==100)
-        postfix="_CMS_scale_j_13TeVUp";
-    if (tes==-100)
-        postfix="_CMS_scale_j_13TeVDown";
-    if (tes==12)
-        postfix="_CMS_scale_gg_13TeVUp";
-    if (tes==-12)
-        postfix="_CMS_scale_gg_13TeVDown";
-    if (tes==22)
-        postfix="_TopMassTreatment_13TeVUp";
-    if (tes==-22)
-        postfix="_TopMassTreatment_13TeVDown";
-    if (tes==11)
-        postfix="_CMS_htt_ttbarShape_13TeVUp";
-    if (tes==-11)
-        postfix="_CMS_htt_ttbarShape_13TeVDown";
-    if (tes==-13)
-        postfix="_CMS_htt_zmumuShape_VBF_13TeVDown";
-    if (tes==13)
-        postfix="_CMS_htt_zmumuShape_VBF_13TeVUp";
-    if (tes==10)
-        postfix="_CMS_htt_dyShape_13TeVUp";
-    if (tes==-10)
-        postfix="_CMS_htt_dyShape_13TeVDown";
-    if (tes==-14)
-        postfix="_CMS_htt_jetToTauFake_13TeVDown";
-    if (tes==14)
-        postfix="_CMS_htt_jetToTauFake_13TeVUp";
-    
-    TDirectory *CRQCD0jet =fout->mkdir("mt_antiiso_0jet_cr");
-    TDirectory *CRQCD1jet =fout->mkdir("mt_antiiso_boosted_cr");
-    TDirectory *CRQCD2jet =fout->mkdir("mt_antiiso_vbf_cr");
-    TDirectory *CRW0jet =fout->mkdir("mt_wjets_0jet_cr");
-    TDirectory *CRW1jet =fout->mkdir("mt_wjets_boosted_cr");
-    TDirectory *CRW2jet =fout->mkdir("mt_wjets_vbf_cr");
-    TDirectory *CRSSQCD0jet =fout->mkdir("mt_antiiso_0jet_crSS");
-    TDirectory *CRSSQCD1jet =fout->mkdir("mt_antiiso_boosted_crSS");
-    TDirectory *CRSSQCD2jet =fout->mkdir("mt_antiiso_vbf_crSS");
-    TDirectory *CRSSW0jet =fout->mkdir("mt_wjets_0jet_crSS");
-    TDirectory *CRSSW1jet =fout->mkdir("mt_wjets_boosted_crSS");
-    TDirectory *CRSSW2jet =fout->mkdir("mt_wjets_vbf_crSS");
-    TDirectory *OS0jet =fout->mkdir("mt_0jet");
-    TDirectory *SS0jet =fout->mkdir("SS0jet");
-    TDirectory *QCD0jet =fout->mkdir("QCD0jet");
-    TDirectory *OS1jet =fout->mkdir("mt_boosted");
-    TDirectory *SS1jet =fout->mkdir("SS1jet");
-    TDirectory *QCD1jet =fout->mkdir("QCD1jet");
-    TDirectory *OS2jet =fout->mkdir("mt_vbf");
-    TDirectory *SS2jet =fout->mkdir("SSvbf");
-    TDirectory *QCD2jet =fout->mkdir("QCDvbf");
-    
-    if (nbhist==1) postfixJES[0]=postfix;
-    
-    for (int k=0; k<nbhist; ++k){
-        
-        if (tes==100) postfix=postfixJES[k];
-        if (tes==1) postfix=postfixTES[k];
-        if (tes==16) postfix=postfixDM[k];
-        if (tes==17) postfix=postfixZLshape[k];
-        if (tes==18) postfix=postfixZLnorm[k];
-        if (tes==19) postfix=postfixFakeDM[k];
-        if (tes==1000) postfix=postfixWG1[k];
-        
-        fout->cd();
-        n70[k]->SetName("n70"+postfix);
-        n70[k]->Write();
-        n70SS[k]->SetName("n70SS"+postfix);
-        n70SS[k]->Write();
-    }
-    
-    for (int k=0; k<nbhist; ++k){
-        
-        if (tes==100) postfix=postfixJES[k];
-        if (tes==1) postfix=postfixTES[k];
-        if (tes==16) postfix=postfixDM[k];
-        if (tes==17) postfix=postfixZLshape[k];
-        if (tes==18) postfix=postfixZLnorm[k];
-        if (tes==19) postfix=postfixFakeDM[k];
-        if (tes==1000) postfix=postfixWG1[k];
-        
-        for (int nn=1; nn<h0_OS[k]->GetSize()-1; ++nn){
-            if (h0_OS[k]->GetBinContent(nn)<0) h0_OS[k]->SetBinContent(nn,0.00001);
-            if (h0_SS[k]->GetBinContent(nn)<0) h0_SS[k]->SetBinContent(nn,0.00001);
-            if (h0_QCD[k]->GetBinContent(nn)<0) h0_QCD[k]->SetBinContent(nn,0.00001);
-            if (h0_WOS[k]->GetBinContent(nn)<0) h0_WOS[k]->SetBinContent(nn,0.00001);
-            if (h0_WSS[k]->GetBinContent(nn)<0) h0_WSS[k]->SetBinContent(nn,0.00001);
-            if (h1_OS[k]->GetBinContent(nn)<0) h1_OS[k]->SetBinContent(nn,0.00001);
-            if (h1_SS[k]->GetBinContent(nn)<0) h1_SS[k]->SetBinContent(nn,0.00001);
-            if (h1_QCD[k]->GetBinContent(nn)<0) h1_QCD[k]->SetBinContent(nn,0.00001);
-            if (h1_WOS[k]->GetBinContent(nn)<0) h1_WOS[k]->SetBinContent(nn,0.00001);
-            if (h1_WSS[k]->GetBinContent(nn)<0) h1_WSS[k]->SetBinContent(nn,0.00001);
-            if (h2_OS[k]->GetBinContent(nn)<0) h2_OS[k]->SetBinContent(nn,0.00001);
-            if (h2_SS[k]->GetBinContent(nn)<0) h2_SS[k]->SetBinContent(nn,0.00001);
-            if (h2_QCD[k]->GetBinContent(nn)<0) h2_QCD[k]->SetBinContent(nn,0.00001);
-            if (h2_WOS[k]->GetBinContent(nn)<0) h2_WOS[k]->SetBinContent(nn,0.00001);
-            if (h2_WSS[k]->GetBinContent(nn)<0) h2_WSS[k]->SetBinContent(nn,0.00001);
-        }
-        
-        CRQCD0jet->cd();
-        h0_CR_QCD[k]->SetName(name.c_str()+postfix);
-        h0_CR_QCD[k]->Write();
-        
-        CRQCD1jet->cd();
-        h1_CR_QCD[k]->SetName(name.c_str()+postfix);
-        h1_CR_QCD[k]->Write();
-        
-        CRQCD2jet->cd();
-        h2_CR_QCD[k]->SetName(name.c_str()+postfix);
-        h2_CR_QCD[k]->Write();
-        
-        CRW0jet->cd();
-        h0_CR_W[k]->SetName(name.c_str()+postfix);
-        h0_CR_W[k]->Write();
-        
-        CRW1jet->cd();
-        h1_CR_W[k]->SetName(name.c_str()+postfix);
-        h1_CR_W[k]->Write();
-        
-        CRW2jet->cd();
-        h2_CR_W[k]->SetName(name.c_str()+postfix);
-        h2_CR_W[k]->Write();
-        
-        CRSSQCD0jet->cd();
-        h0_CRSS_QCD[k]->SetName(name.c_str()+postfix);
-        h0_CRSS_QCD[k]->Write();
-        
-        CRSSQCD1jet->cd();
-        h1_CRSS_QCD[k]->SetName(name.c_str()+postfix);
-        h1_CRSS_QCD[k]->Write();
-        
-        CRSSQCD2jet->cd();
-        h2_CRSS_QCD[k]->SetName(name.c_str()+postfix);
-        h2_CRSS_QCD[k]->Write();
-        
-        CRSSW0jet->cd();
-        h0_CRSS_W[k]->SetName(name.c_str()+postfix);
-        h0_CRSS_W[k]->Write();
-        
-        CRSSW1jet->cd();
-        h1_CRSS_W[k]->SetName(name.c_str()+postfix);
-        h1_CRSS_W[k]->Write();
-        
-        CRSSW2jet->cd();
-        h2_CRSS_W[k]->SetName(name.c_str()+postfix);
-        h2_CRSS_W[k]->Write();
-        
-        OS0jet->cd();
-        h0_OS[k]->SetName(name.c_str()+postfix);
-        h0_WOS[k]->SetName(name.c_str()+postfix);
-        h0_OS[k]->Write();
-        
-        SS0jet->cd();
-        h0_SS[k]->SetName(name.c_str()+postfix);
-        h0_WSS[k]->SetName(name.c_str()+postfix);
-        h0_SS[k]->Write();
-        
-        QCD0jet->cd();
-        h0_QCD[k]->SetName(name.c_str()+postfix);
-        h0_QCD[k]->Write();
-        
-        OS1jet->cd();
-        h1_OS[k]->SetName(name.c_str()+postfix);
-        h1_WOS[k]->SetName(name.c_str()+postfix);
-        if (sample=="W")
-            h1_WOS[k]->Write();
-        else
-            h1_OS[k]->Write();
-        
-        SS1jet->cd();
-        h1_SS[k]->SetName(name.c_str()+postfix);
-        h1_WSS[k]->SetName(name.c_str()+postfix);
-        if (sample=="W")
-            h1_WSS[k]->Write();
-        else
-            h1_SS[k]->Write();
-        
-        QCD1jet->cd();
-        h1_QCD[k]->SetName(name.c_str()+postfix);
-        h1_QCD[k]->Write();
-        
-        OS2jet->cd();
-        h2_OS[k]->SetName(name.c_str()+postfix);
-        h2_WOS[k]->SetName(name.c_str()+postfix);
-        if (sample=="W")
-            h2_WOS[k]->Write();
-        else
-            h2_OS[k]->Write();
-        
-        SS2jet->cd();
-        h2_SS[k]->SetName(name.c_str()+postfix);
-        h2_WSS[k]->SetName(name.c_str()+postfix);
-        if (sample=="W")
-            h2_WSS[k]->Write();
-        else
-            h2_SS[k]->Write();
-        
-        QCD2jet->cd();
-        h2_QCD[k]->SetName(name.c_str()+postfix);
-        h2_QCD[k]->Write();
-    }
-    cout<<h0_OS[0]->Integral()<<" "<<h1_OS[0]->Integral()<<" "<<h2_OS[0]->Integral()<<endl;
     fout->Close();
 } 
 
